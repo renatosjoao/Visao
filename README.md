@@ -1,4 +1,4 @@
-Visao
+Visão
 =====
 
-Visao Computacional
+Visão Computacional - mestrado UFABC
