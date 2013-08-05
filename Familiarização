@@ -1,0 +1,152 @@
+:language_code: pt_br
+
+==========
+Renato_ex1
+==========
+
+:Autor: Renato
+:Data: 18/09/2012
+
+
+.. code:: python
+    :show_code: yes
+    :show_output: yes
+    :show_images: yes
+    
+    # * * * Problema #2 * * * #
+   
+    # Multiplicação de Matrizes
+     
+    import ia636
+    import numpy
+    import time as t
+     
+    def multiplica(A, B):     # Função de multiplicação de duas matrizes 
+     linhasA = len(A)         # Número de linhas de A
+     colunasA = len(A[0])     # Número de colunas de A 
+     linhasB = len(B)         # Número de linhas de B 
+     colunasB = len(B[0])     # Número de colunas de B 
+     
+     if colunasA == linhasB:  # Condição para que a multiplicação entre matrizes possa ocorrer
+         igual = colunasA 
+         MAT = [[sum(A[m][n] * B[n][p] for n in range(igual)) for p in range(colunasB)] for m in range(linhasA)]
+         return MAT           # Retorn a matriz multiplicada
+     else:
+         return -1
+
+    # Exemplo de execução da função para 2 matrizes A(4x3) e B(3x4) 
+    
+    # A(4x3)        
+    A = [[10, 0, 2],[3, 3, 1],[3, 4, 6],[1,1,1]] 
+    # B(3x4)    
+    B = [[3,4,6,7],[2,2,3,-1],[1,0,0,1]]
+    print "Problema #2\n"
+    t0 = t.time();
+    C = multiplica (A,B)
+    t1 = t.time();
+    print "Tempo de multiplicação das matrizes : %.10lf segundos.\n" %(t1-t0)
+    print "Matriz :"
+    print C
+    #***********************************************************************    
+    
+.. code:: python
+    :show_code: yes
+    :show_output: yes
+    :show_images: yes
+
+    # * * * Problema #2 * * * #
+    
+    # Calcula determinante de uma matriz por eliminação Gaussiana
+    
+    import ia636
+    import numpy
+    import time as t
+    
+    def determinante(Matriz):
+     Matriz = [ list(linhas) for linhas in Matriz ]
+     n = len(Matriz)
+     res = 1.0
+     for j in range(n-1, 0, -1):
+      pivot, i = max((abs(Matriz[k][j]), k) for k in range(j+1))
+      pivot = Matriz[i][j]
+      if pivot == 0.0:
+       return 0.0
+      Matriz[i], Matriz[j] = Matriz[j], Matriz[i]
+      if i != j:
+       res = -res
+      res *= pivot
+      fator = -1.0/pivot
+      for i in range(j):
+       f = fator * Matriz[i][j]
+       for k in range(j):
+        Matriz[i][k] += f * Matriz[j][k]
+     res *= Matriz[0][0]
+     return res 
+   
+    # Exemplo de execução da função determinante(Matriz)     
+    print "Problema #2\n"
+    A = [[10, 0, 2, 8],[3, 3, 1, 3],[3, 4, 6, 2],[1, 1, 1, 4]] 
+    t0 = t.time();
+    det =  determinante(A)
+    t1 = t.time();
+    print "Tempo de calculo da determinante : %.10lf segundos.\n" %(t1-t0)
+    print "Determinante : %f " %determinante(A)     
+    #***********************************************************************    
+   
+
+.. code:: python
+    :show_code: yes
+    :show_output: yes
+    :show_images: yes
+ 
+    # * * * Problema #2 * * * #
+    
+    # Processamento de imagem
+    
+    from ia636 import *
+    import numpy
+    import time as t
+
+    img = adread("carro.jpg")             # lendo a imagem do carro
+    adshow(img,"original")    
+   
+    rgb2gray = iargb2gray(img)            # Transformando a imagem original em tons de cinza
+    adshow(rgb2gray,"Tons de Cinza")
+  
+    (g,a) = iasobel(rgb2gray)             # Aplicando o filtro Sobel na imagen tons de cinza
+    adshow(g,"Sobel")
+
+    log = ialogfilter(rgb2gray, 0.75)     # Aplicando o filtro Laplaciano de Gaussiano LoG na imagem tons de cinza
+    adshow(log,"Filtro Laplaciano de Gaussiano")  
+
+    #***********************************************************************    
+   
+    
+.. code:: python
+    :show_code: yes
+    :show_output: yes
+    :show_images: yes
+     
+    # * * * Problema #3 * * * #
+    
+    # Criação de um tabuleiro de XadreZ
+    
+    import ia636
+    import numpy as np
+    import time as t
+      
+    def xadrez(h,w,ph,pw):     
+        x, y = meshgrid(r_[0:w-1]//pw, r_[0:h-1]//ph);
+        a = mod((x+y),2);
+        return a
+    
+    # Exemplo de execução
+    print "Problema #3\n"
+    t0 = t.time();
+    result = xadrez(1000,1000,100,100);
+    t1 = t.time();
+    print "Tempo de execução: %.4lf segundos.\n" % (t1 - t0)
+    iashow(result);
+    
+    #***********************************************************************
+

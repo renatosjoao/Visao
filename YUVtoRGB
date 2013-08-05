@@ -1,0 +1,45 @@
+:language_code: pt_br
+
+==============
+YUV2RGB_Renato
+==============
+
+:Autor: renatosjoao
+:Data: 22/09/2012
+
+.. code:: python
+    :show_code:   yes
+    :show_output: yes
+    :show_images: yes
+    :line_number: yes
+
+    import ia636
+    import numpy as np
+       
+    img = findImageFile("courseVISUFABC_2012Q3/readYUV/teste.yuv")   #lendo a imagem para a variavel img                    
+    dt = dtype((uint8, (480,640*2))) 
+    mat = fromfile(img,dt,1)            #armazenando a imagem em uma matriz    
+    Yi = mat[:,:,1::2]                  # aqui eu separo os pixels da matriz original
+    Ui = mat[:,:,0::4]                  #  
+    Vi = mat[:,:,2::4]                  #   
+    T1 = ones((1, 480, 640))            #Criando uma matriz temporária de 480x640 para guardar
+    T1[:,:,0::2] = Ui                   # informações da banda U
+    T1[:,:,1::2] = Ui                   #
+    Ui = T1
+    T2 = ones((1, 480, 640))            #Criando outra matriz temporária de 480x640 para guardar 
+    T2[:,:,0::2] = Vi                   # informações da banda V
+    T2[:,:,1::2] = Vi                   #
+    Vi = T2
+    RGB = np.zeros((3,480,640),dtype=np.float32)                  #Criação da matriz RGB final     
+    RGB[0,:,:] = 1.164*(Yi-16) + 1.596*(Vi-128)                   # 
+    RGB[1,:,:] = 1.164*(Yi-16) - 0.813*(Vi-128) - 0.391*(Ui-128)  #  
+    RGB[2,:,:] = 1.164*(Yi-16) + 2.018*(Ui-128)                   # 
+    putmask(RGB,RGB>255,255)            #Aplicação de uma máscara para valores maiores que 255
+    putmask(RGB,RGB<0.0,0.0)            #Aplicaçao de uma máscara para valores menores que 0.0
+    #print RGB.shape
+    adshow(Yi,title="Imagem Original YUV")
+    #adshow(RGB[0,:,:],title="Canal R")                
+    #adshow(RGB[1,:,:],title="Canal G")
+    #adshow(RGB[2,:,:],title="Canal B")
+    adshow(RGB,title="Imagem convertida para RGB")
+    #print RGB

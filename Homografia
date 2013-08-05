@@ -1,0 +1,169 @@
+:language_code: pt_br
+
+
+.. code:: python
+    :show_code:   yes
+    :show_output: yes
+    :show_images: yes
+    :line_number: yes
+    
+     
+    # Pontos Iniciais da cena real ( em cm ) -  * * * FIGURA DEITADA * * *
+    #
+    # D +---------------+ A
+    #   |               |
+    #   |   RENATO      |
+    # C +---------------+ B
+    #
+    # A1 = (0, 0)
+    # B1 = (3, 0)
+    # C1 = (3, 5)
+    # D1 = (0, 5)
+    #
+    #
+    # Coordenadas ( em pixels) da foto da cena real
+    # A1 = (488, 530)
+    # B1 = (658, 516)
+    # C1 = (586, 728)
+    # D1 = (384, 740)
+    #
+    # Utilizando o algoritmo do 4 pontos para calcular a homografia 1 (H1), obtemos :
+    #
+    # H1 = [[ 0.0726, -0.0463, 0.6746 ]
+    #      [ -0.0109,  0.0243, 0.7327 ]
+    #      [ -0.0000, -0.0000, 0.0014 ]]
+    #
+    # inversa (H1) = | 19.293217 36.760327 -2.853535e+4 |
+    #                | 8.654159  57.641464 -3.433714e+4 |
+    #                |0      -0         714.285714  |
+    #
+    #---------------------------------------------------------------------
+    #
+    # Pontos Iniciais da cena real ( em cm ) -  * * * FIGURA EM PÉ * * * 
+    #
+    #    D +---------------+ A
+    #      |               |
+    #      |    RENATO     |
+    #    C +---------------+ B
+    #
+    # A2 = (0, 0)
+    # B2 = (3, 0)
+    # C2 = (3, 5)
+    # D2 = (0, 5)
+    #
+    # Coordenadas ( em pixels) da foto da cena real
+    # A2 = (600, 340)
+    # B2 = (680, 508)
+    # C2 = (595, 720)
+    # D2 = (508, 550)
+    #
+    # Utilizando o algoritmo do 4 pontos para calcular a homografia 2 (H2), obtemos :
+    #
+    # H2 = [[ -0.0485,    0.0338,   -0.8639  ]
+    #       [ -0.0882,   -0.0525,   -0.4895  ]
+    #       [ -0.0000,    0.0000,   -0.0014  ]]
+    #
+    #
+    #    
+    # inversa (H2) = |-9.498119   -6.11498    7999.077067     |
+    #                |15.956841   -8.774453   -6778.585527    |
+    #                |0       -0      -714.285714 |
+    #
+    #
+    #---------------------------------------------------------------------
+    #
+    # Calculando a Inversão através da multiplicação das homografias  H1*inv(H2) e aplicando nas coordenadas em pixel:
+    #
+    # A2 = [[600] 
+    #       [340]
+    #       [1]]
+    #
+    # B2 = [[680]
+    #       [508]
+    #       [1]]
+    #
+    # C2 =  [[595]    
+    #        [720]
+    #        [1]]
+    #
+    # D2 = [[508] 
+    #       [550]
+    #       [1]]
+    #
+    # obtemos as novas coordenadas em pixel da imagem distorcida que podem ser conferidos na " Imagem Distorcida "
+    # P1 = (723,545)
+    # P2 = (747,680)
+    # P3 = (657,1826)
+    # P4 = (629,573) 
+    #
+    #
+    #
+    # Calculando a Inversão através da multiplicação das homografias  : inv(H1) * H2(coordenadas em cm)
+    # obtemos as coordenadas em cm do plano horizontal desenhadas na " Imagem Distorcida 2 "
+    #
+    #P1 = (28.49, 2.45)
+    #P2 = (26.52, 5.66)
+    #P3 = (10.53, 11.74)
+    #P4 = (12.09, 8.56)
+    #
+    #
+    # ***** Dados de calibração da Câmera *****
+    #
+    #    Focal Length: fc = [2214.05140 2219.42691][18.18342 17.92093]
+    #    Principal point: cc = [1141.50045 832.58841][34.87373 32.37512]
+    #    Skew: alpha_c = [0.00000][0.00000]
+    #        => angle of pixel axes = 90.00000 0.00000 degrees
+    #    Distortion: kc = [-0.09990 0.04723 -0.00596 -0.00232 0.00000]
+    #                     [0.04494 0.15184 0.00347 0.00565 0.00000]
+    #    Pixel error: err = [1.55327 1.48574]
+    #    
+    #    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    #% FunÃ§ao dos 4 pontos para calcular homografia (Implementada no MATLAB)
+    #%
+    #% npoints =  numero de pontos 
+    #% x = vetor de pontos iniciais, coordenada x
+    #% y = vetor de pontos iniciais, coordenada y
+    #% xd = vetor de pontos destino no plano projetado, coordenada x
+    #% yd = vetor de pontos destino no plano projetado, coordenada y
+    #    %%%%%
+    #% Ex:
+    #% npoints = 4 
+    #% x = [0, 3, 3, 0];
+    #% y = [0, 0, 5, 5];
+    #% xd = [488, 658, 586, 384];
+    #% yd = [530, 516, 728, 740];
+    #    %%%%%
+    #function  H = homografia(x,xd,y,yd,npoints)
+    #A = zeros(2*npoints,9);
+    #for i = 1:npoints,
+    #    A(2*i-1,:) = [x(i), y(i), 1, 0, 0, 0, -x(i)*xd(i), -xd(i)*y(i), -xd(i)];
+    #    A(2*i, :) = [0, 0, 0, x(i), y(i), 1, -x(i)*yd(i), -yd(i)*y(i), -yd(i)];
+    #end;
+    #if npoints == 4
+    #    h = null(A);
+    #else
+    #    [U,S,V] = svd(A);
+    #    h = V(:,9);
+    #end;
+    #H = [ h(1), h(2), h(3), h(4), h(5), h(6), h(7), h(8), h(9);];
+    
+
+ 
+    IMG1 = adread("imagem1.jpg").astype('double')
+    adshow(IMG1, title="Imagem Original - Placa Deitada")
+
+    IMG2 = adread("imagem2.jpg").astype('double')
+    adshow(IMG2, title="Imagem Original - Placa em Pé")
+    
+    IMG3 = adread("distorcida.jpg").astype('double')
+    adshow(IMG3, title="Imagem Distorcida")
+
+    IMG4 = adread("distorcida2.JPG").astype('double')
+    adshow(IMG4, title="Imagem Distorcida2")
+    
+    IMG5 = adread("distorcida.png").astype('double')
+    adshow(IMG5, title="Imagem Distorcida")
+
+    IMG6 = adread("rotacionada.JPG").astype('double')
+    adshow(IMG6, title="Imagem projetada ")
+

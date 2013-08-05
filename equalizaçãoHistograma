@@ -1,0 +1,88 @@
+:language_code: pt_br
+
+==========
+Ex3_renato
+==========
+
+:Autor: renatosjoao
+:Data: 08/10/2012
+
+
+    
+    
+.. code:: python
+    :show_code:   yes
+    :show_output: yes
+    :show_images: yes
+    :line_number: yes
+
+    import numpy as np
+    from ia636 import *
+  
+
+    landsat = adread("landsat.jpg").astype('int32')            # lendo a imagem landsat.jpg para a variavel landsat 
+    #print landsat.shape                                        # imprimindo os dados do formato da imagem
+    adshow(landsat,title="Imagem landsat")                     # mostrando a imagem
+    histo = iahistogram(landsat)                               # calculando o histograma da imagem   
+    mmplot([[histo]],title="Histograma da imagem landsat")     # plotando o histograma da imagem   
+    acumulado = cumsum(histo) / (1.*product(landsat.shape))    # calculando o histograma acumulado da imagem   
+    mmplot([[acumulado]],title="Histograma acumulado")         # plotando o histograma acumulado da imagem   
+    #temp = iaapplylut(landsat,acumulado)    
+    #adshow(temp)                   # 
+    #histo2 = ianormalize(temp,(0,255)).astype("int32")         # normalizando o histograma da imagem 
+    #mmplot([[cumsum(histo2)]],title = "Histograma equalizado acumulado") #plotando o histograma equalizado acumulado da imagem    
+   
+   
+    nova_img = landsat*.0           #criando uma nova matriz de zeros do mesmo tamanho que a landsat
+    i = 0
+    for band in landsat:            #percorrendo as bandas da imagem R,G,B, embora sejam todas iguais
+      j = 0
+      for list in band:
+       k = 0
+       for color in list:
+        nova_img[i][j][k] = 255.0*acumulado[landsat[i][j][k]]    #nova imagem 
+        k += 1
+       j += 1
+      i += 1
+    nova_img = uint8(nova_img)                 #Cast da nova imagem para inteiro sem sinal unsigned int8
+ 
+    #Mostrando imagem com histograma equalizado
+    adshow(nova_img, title='Imagem com Histograma Equalizado')           
+    mmplot([[iahistogram(nova_img)]],title = "Histograma equalizado da nova imagem")
+    mmplot([[cumsum(iahistogram(nova_img))]],title = "Histograma acumulado da nova imagem ")
+    
+
+    
+
+.. code:: python
+    :show_code:   yes
+    :show_output: yes
+    :show_images: yes
+    :line_number: yes
+
+    import numpy as np
+    from ia636 import *
+    
+    def stretching(img):        # função de esticamento 
+     max = img.max()            # apenas calculando o maximo da imagem 
+     min = img.min()            # apenas calculando o minimo da imagem
+     output = (img - min)*255/(max - min) # calculando o esticamento da imagem
+     return output              # retorno da função   
+
+    # lendo a imagem landsat.jpg para a variavel landsat 
+    landsat = adread("landsat.jpg").astype('int32')
+    # mostrando a imagem antes do esticamento
+    adshow(landsat,title="Imagem original")
+    # plotango o histograma de frequencias antes do esticamento
+    mmplot([[iahistogram(landsat)]],title="Histograma antes do esticamento")     
+    # aplicando a funcao de esticamento e guardando o resultado na variavel imagem_saida
+    imagem_saida = stretching(landsat)    
+    # mostrando a imagem apos o esticamento
+    adshow(imagem_saida,title="Imagem com esticamento")
+    # plotango o histograma de frequencias apos do esticamento
+    mmplot([[iahistogram(imagem_saida)]],title="Histograma após esticamento")
+
+
+#
+O resultado melhor foi obtido com a equalização de histograma.
+

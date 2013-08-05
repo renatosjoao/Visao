@@ -1,0 +1,309 @@
+:language_code: pt_br
+
+  
+  
+  
+.. code:: python
+    :show_code:   yes
+    :show_output: yes
+    :show_images: yes
+    :line_number: yes
+    
+    import ia636
+    from ia636 import *
+    import numpy as np
+    import scipy
+    from scipy import *
+    import scipy.ndimage as ndi
+    from scipy.misc import imresize
+    import time as tm   
+    from scipy.ndimage import *    
+    import os
+    from scipy.signal import convolve2d as conv
+    
+    cam = adread("cameraman.tif").astype('double')
+    gal = adread("galeao.jpg").astype('double')
+    angio = adread("angiogr.tif").astype('double')
+    ducati = adread("ducati.jpg").astype('double')   
+    
+    # Este método é utilizado para criar um kernel gaussiano para  "borrar" a imagem .
+    def filtroGaussiano(sigma,window = 3):
+        kernel = zeros((window,window))
+        c0 = window // 2
+
+        for x in range(window):
+            for y in range(window):
+                r = hypot((x-c0),(y-c0))
+                val = (1.0/2*pi*sigma*sigma)*exp(-(r*r)/(2*sigma*sigma))
+                kernel[x,y] = val
+        return kernel / kernel.sum()
+
+    #Este método é usado para criar uma matrix NxN a ser utilizada como um filtro
+    def createFilter(rawfilter):
+        order = pow(len(rawfilter),0.5)
+        order = int(order)
+        filt_array = array(rawfilter)
+        outfilter = filt_array.reshape((order,order))
+        return outfilter
+     
+    # Este método é empregado para encontrar o starting point de uma borda    
+    def stop(im,thres):
+        X,Y = where(im > thres)
+        try:
+            y = Y.min()
+        except:
+            return -1
+        X = X.tolist()
+        Y = Y.tolist()
+        index = Y.index(y)
+        x = X[index]
+        return [x,y]   
+     
+    #Este método é usado para retornar o próximo ponto de uma borda
+    def nextNbd(im,p0,p1,p2,thres):
+        kit = [-1,0,1]
+        X,Y = im.shape
+        for i in kit:
+            for j in kit:
+                if (i+j) == 0:
+                    continue
+                x = p0[0]+i
+                y = p0[1]+j
+                
+                if (x<0) or (y<0) or (x>=X) or (y>=Y):
+                    continue
+                if ([x,y] == p1) or ([x,y] == p2):
+                    continue
+                if (im[x,y] > thres): #and (im[i,j] < 256):
+                    return [x,y]
+        return -1
+
+    #Este método é empregado para checar por NON_MAXIMUN Suppression
+    def nms_check(grad,i,j,x1,y1,x2,y2):
+        try:
+            if (grad[i,j] > grad[i+x1,j+y1]) and (grad[i,j] > grad[i+x2,j+y2]):
+                return 1
+            else:
+                return 0
+        except IndexError:
+            return -1
+    
+    #Método de Canny
+    def Canny(imin,sigma,thresHigh = 50,thresLow = 10):
+        gausskernel = filtroGaussiano(sigma,5)
+        #fx e fy, filtros de Prewitt como descritos no código de baixo
+        fx = createFilter([1, 1, 1,
+                           0, 0, 0,
+                          -1,-1,-1])
+        fy = createFilter([-1,0,1,
+                           -1,0,1,
+                           -1,0,1])
+
+        imout = conv(imin,gausskernel)[1:-1,1:-1]
+        gradx = conv(imout,fx)[1:-1,1:-1]
+        grady = conv(imout,fy)[1:-1,1:-1]
+        
+        grad = hypot(gradx,grady)
+        theta = arctan2(grady,gradx)
+        theta = 180 + (180/pi)*theta
+        
+        # Removendo as magnitudes que nao sao significantes
+        x,y = where(grad < 10)
+        theta[x,y] = 0
+        grad[x,y] = 0
+        
+        # Quantizaçao dos angulos.
+        x0,y0 = where(((theta<22.5)+(theta>157.5)*(theta<202.5)
+                       +(theta>337.5)) == True)
+        x45,y45 = where( ((theta>22.5)*(theta<67.5)
+                          +(theta>202.5)*(theta<247.5)) == True)
+        x90,y90 = where( ((theta>67.5)*(theta<112.5)
+                          +(theta>247.5)*(theta<292.5)) == True)
+        x135,y135 = where( ((theta>112.5)*(theta<157.5)
+                            +(theta>292.5)*(theta<337.5)) == True)
+
+        theta = theta
+        theta[x0,y0] = 0
+        theta[x45,y45] = 45
+        theta[x90,y90] = 90
+        theta[x135,y135] = 135
+        x,y = theta.shape        
+        temp = Image.new('RGB',(y,x),(255,255,255))
+        for i in range(x):
+            for j in range(y):
+                if theta[i,j] == 0:
+                    temp.putpixel((j,i),(0,0,255))
+                elif theta[i,j] == 45:
+                    temp.putpixel((j,i),(255,0,0))
+                elif theta[i,j] == 90:
+                    temp.putpixel((j,i),(255,255,0))
+                elif theta[i,j] == 45:
+                    temp.putpixel((j,i),(0,255,0))
+        grad = grad.copy()
+        x,y = grad.shape
+
+        for i in range(x):
+            for j in range(y):
+                if theta[i,j] == 0:
+                    test = nms_check(grad,i,j,1,0,-1,0)
+                    if not test:
+                        grad[i,j] = 0
+
+                elif theta[i,j] == 45:
+                    test = nms_check(grad,i,j,1,-1,-1,1)
+                    if not test:
+                        grad[i,j] = 0
+
+                elif theta[i,j] == 90:
+                    test = nms_check(grad,i,j,0,1,0,-1)
+                    if not test:
+                        grad[i,j] = 0
+                elif theta[i,j] == 135:
+                    test = nms_check(grad,i,j,1,1,-1,-1)
+                    if not test:
+                        grad[i,j] = 0
+                    
+        init_point = stop(grad, thresHigh)
+        
+        # Hystereses        
+        
+        while (init_point != -1):
+            grad[init_point[0],init_point[1]] = -1
+            p2 = init_point
+            p1 = init_point
+            p0 = init_point
+            p0 = nextNbd(grad,p0,p1,p2,thresLow)
+            
+            while (p0 != -1):
+                #print p0
+                p2 = p1
+                p1 = p0
+                grad[p0[0],p0[1]] = -1
+                p0 = nextNbd(grad,p0,p1,p2,thresLow)
+                
+            init_point = stop(grad,thresHigh)
+
+        # Conversao da imagem final em uma imagem binaria
+        x,y = where(grad == -1)
+        grad[:,:] = 0
+        grad[x,y] = 255
+        return grad         
+    
+    adshow(cam, title="Cameraman Original")
+    ti=tm.time()  
+    camera_canny = Canny(cam, 1.2, 50,10)          
+    tf=tm.time()
+    adshow(camera_canny, title="Cameraman Canny")    
+    print "Tempo de execucao do Canny na imagem Cameraman = %.4lf" %(tf-ti)
+    labels, n_labels = ndi.measurements.label(camera_canny, np.ones((3, 3)))    
+    adshow(ialblshow(labels),title="Cameraman Colorida ")
+      
+    adshow(angio, title = "Angioplastia Original")
+    angio_r = angio[0,:,:]
+    ti=tm.time()  
+    angio_r_canny = Canny(angio_r, 0.4, 50,10) 
+    tf=tm.time()         
+    adshow(angio_r_canny, title="Angioplastia Canny")    
+    print "Tempo de execução do Canny na imagem Angioplastia = %.4lf" %(tf-ti)
+    labels, n_labels = ndi.measurements.label(angio_r_canny, np.ones((3, 3)))    
+    adshow(ialblshow(labels),title="Angioplastia Colorida ")
+  
+    gal_menor = imresize(gal,(250,300))
+    adshow(gal_menor, title = "Galeao Original")
+    ti=tm.time()  
+    gal_canny = Canny(gal_menor, 1.4, 50,10) 
+    tf=tm.time()         
+    adshow(gal_canny, title="Galeao Canny")    
+    print "Tempo de execução do Canny na imagem Galeao = %.4lf" %(tf-ti)
+    labels, n_labels = ndi.measurements.label(gal_canny, np.ones((3, 3)))    
+    adshow(ialblshow(labels),title="Galeao Colorida ")
+    
+    #print gal.shape
+    #print gal.dtype
+
+    
+      
+.. code:: python
+    :show_code:   yes
+    :show_output: yes
+    :show_images: yes
+    :line_number: yes
+    
+    from ia636 import *
+    from numpy import *
+    import time as tm
+    
+    #carregando imagnes para teste
+    cam = adread("cameraman.tif")
+    gal = adread("galeao.jpg")
+    lena2 = adread("lenaTest3.jpg")
+       
+    #definindo função do detector de bordas de Prewitt   
+    def prewitt(im):
+      l = len(im)   #números de linhas da matriz da imagem escolhida
+      c = len(im[0]) #números de colunas da matriz da imagem escolhida
+      print l
+      print c
+      a=double(im); #copia da imagem para calculo das aproximações de derivadas parciais 
+      adshow(im, title='Imagem Original'); #Mostrando imagem original
+      gx=[[-1, 0, 1],[-1, 0, 1],[-1, 0, 1]];  #filtro vertical (Eixo x)
+      gy=[[-1, -1, -1],[0, 0, 0],[1, 1, 1]];  #filtro horizontal (Eixo y)
+      
+      #Gradiente eixo x
+      fx = im*0.0 #zerando matriz para calculos no eixo x, com mesmo tamanho da original
+      for i in range(1, l-1):
+        for j in range(1, c-1):
+          fx[i,j]=a[i-1][j-1]*gx[0][0]+a[i-1][j]*gx[0][1]+a[i-1][j+1]*gx[0][2]+a[i][j-1]*gx[1][0]+a[i][j]*gx[1][1]+a[i][j+1]*gx[1][2]+a[i+1][j-1]*gx[2][0]+a[i+1][j]*gx[2][1]+a[i+1][j+1]*gx[2][2];
+          #equilibrando valores para melhor visualizar bordas
+          if fx[i][j]<0:
+            fx[i][j] = fx[i][j]*(-1.0)
+      adshow(uint8(fx), title = 'Gradiente em x'); #mostrando imagem resultando do gradiente em x
+
+      #Gradiente eixo y
+      fy = im*0.0 #zerando matriz para calculos no eixo y, com mesmo tamanho da original
+      for i in range(1, l-1):
+        for j in range(1, c-1):
+          fy[i,j]=a[i-1][j-1]*gy[0][0]+a[i-1][j]*gy[0][1]+a[i-1][j+1]*gy[0][2]+a[i][j-1]*gy[1][0]+a[i][j]*gy[1][1]+a[i][j+1]*gy[1][2]+a[i+1][j-1]*gy[2][0]+a[i+1][j]*gy[2][1]+a[i+1][j+1]*gy[2][2];        
+          #equilibrando valores para melhor visualizar bordas
+          if fy[i][j]<0:
+            fy[i][j] = fy[i][j]*(-1.0)       
+      adshow(uint8(fy), title = 'Gradiente em y'); #mostrando imagem resultando do gradiente em y
+      
+      #Calculando matriz resultante que é a soma das matrizes com as aproximações das derivadas parciais
+      F=fx+fy;
+      
+      #Ajustando limiares para eliminar pequenas respostas
+      for i in range(1, l-1):
+       #for j in range(1,c):      
+        if F[i][1]<0:
+          F[i][1] = F[i][1]*(-1.0)
+        elif F[i][1]>254:
+          F[i][1]=1.0
+        else:
+          F[i][1]=0.0  
+               
+      #Retornando imagem resultante F com as bordas detectadas         
+      return F
+      
+    #Testando com a imagem "cameraman.tif"  
+    ti=tm.time()
+    impw = prewitt(cam) #Chamando função Prewitt
+    adshow(uint8(impw), title='Detector de Bordas - Prewitt'); #Mostrando resultado final
+    tf=tm.time()
+    print "Tempo execução %.4lf segundos\n" % (tf - ti)
+
+    #Testando com a imagem "galeao.jpg"
+    ti = tm.time()
+    im_gal = prewitt(gal) #Chamando função Prewitt   
+    adshow(uint8(im_gal), title='Detector de Bordas - Prewitt'); #Mostrando resultado final
+    tf=tm.time()
+    print "Tempo execução %.4lf segundos\n" % (tf - ti)
+    
+    #Testando com a imagem "angio.jpg"
+    angio_r = angio[0,:,:]
+    ti = tm.time()
+    im_ang = prewitt(angio_r) #Chamando função Prewitt   
+    adshow(uint8(im_ang), title='Detector de Bordas - Prewitt'); #Mostrando resultado final
+    tf=tm.time()
+    print "Tempo execução %.4lf segundos\n" % (tf - ti)
+

@@ -1,0 +1,336 @@
+:language_code: pt_br
+
+
+===================
+Q3_renatosjoao
+===================
+
+:Autor: renatosjoao
+:Data: 11/12/2012
+
+===========================================================
+Equações de conversão de Quaternion <-> Roll, Pitch, Yaw
+===========================================================  
+
+.. equation:: latex
+        :align: left
+        :dpi: 120
+        
+        
+        Roll : \phi : rot. sobre o eixo X \\
+        Pitch : \theta : rot. sobre o eixo Y \\
+        Yaw : \psi : rot. sobre o eixo Z \\
+        
+                
+.. equation:: latex
+        :align: left
+        :dpi: 120
+
+    \left(\begin{matrix}
+    \phi \\ \theta \\ \psi 
+    \end{matrix}\right)
+    =
+    \left(\begin{matrix}
+    \arctan \dfrac{2(q_0q_1 + q_2q_3)}{1 - 2(q_1^2 + q_2^2)} \\
+    \arcsin (2(q_0q_2 - q_3q_1))\\
+    \arctan \dfrac{2(q_0q_3 + q_1q_2)}{1 - 2(q_2^2 + q_3^2)} \\
+    \end{matrix}\right)
+     
+.. equation:: latex
+        :align: left
+        :dpi: 120     
+        
+      
+         q =  R_z(\psi)R_y(\theta)R_x(\phi) =  [\cos(\psi/2) + k\sin(\psi/2)][\cos(\theta/2) + j\sin(\theta/2)][\cos(\phi/2) + i\sin(\phi/2)] \\ \\
+         \left(\begin{matrix}
+         q
+         \end{matrix}\right)
+         =
+         \left(\begin{matrix}
+         \cos(\phi/2)\cos(\theta/2)\cos(\psi/2) + \sin(\phi/2)\sin(\theta/2)\sin(\psi/2) \\
+         \sin(\phi/2)\cos(\theta/2)\cos(\psi/2) - \cos(\phi/2)\sin(\theta/2)\sin(\psi/2) \\
+         \cos(\phi/2)\sin(\theta/2)\cos(\psi/2) + \sin(\phi/2)\cos(\theta/2)\sin(\psi/2) \\
+         \cos(\phi/2)\cos(\theta/2)\sin(\psi/2) - \sin(\phi/2)\sin(\theta/2)\cos(\psi/2) \\
+         \end{matrix}\right)
+                   
+         
+===================================================
+Conversão de Quaternion <-> Roll, Pitch, Yaw
+===================================================  
+
+.. code:: python
+    :show_code:   yes
+    :show_output: yes
+    :show_images: yes
+    :line_number: yes
+
+    import ia636
+    from ia636 import *
+    import numpy as np
+    import scipy
+    from scipy import *
+
+    ## Função para criar Quaternion a partir de Roll, Pitch e Yaw
+    ## Esta função recebe valores em radianos
+    def criaQuaternionFromRPY(roll, pitch, yaw):
+        c1 = math.cos(yaw);
+        s1 = math.sin(yaw);
+        c2 = math.cos(pitch);
+        s2 = math.sin(pitch);
+        c3 = math.cos(roll);
+        s3 = math.sin(roll);
+        w = math.sqrt(1.0 + c1 * c2 + c1*c3 - s1 * s2 * s3 + c2*c3) / 2.0;
+        w4 = (4.0 * w);
+        x = (c2 * s3 + c1 * s3 + s1 * s2 * c3) / w4 ;
+        y = (s1 * c2 + s1 * c3 + c1 * s2 * s3) / w4 ;
+        z = (-s1 * s3 + c1 * s2 * c3 +s2) / w4 ;     
+        return [w,x,y,z]
+        
+    ## Função para criar Roll Pitch Yaw a partir de Quaternion
+    ## Esta função recebe valores em radianos
+    def criaRPYFromQuaternion(q1, q2, q3, q4):
+        sqw = q1*q1;
+        sqx = q2*q2;
+        sqy = q3*q3;
+        sqz = q4*q4;
+        unit = sqx + sqy + sqz + sqw; 
+        test = q2*q3 + q4*q1;
+        if test > 0.499*unit :
+            Roll = 0;
+            Pitch = pi/2;
+            Yaw = 2 * math.atan2(q2,q1);
+            return [Roll, Pitch, Yaw]
+        elif test < -0.499*unit :
+            Roll = 0;
+            Pitch = -pi/2;
+            Yaw = -2 * math.atan2(q2,q1);
+            return [Roll, Pitch, Yaw]
+        else :
+            Roll = math.atan2(2*q2*q1-2*q3*q4 , -sqx + sqy - sqz + sqw);
+            Pitch  = math.asin(2*test/unit);
+            Yaw  = math.atan2(2*q3*q1-2*q2*q4 , sqx - sqy - sqz + sqw);
+            return [Roll, Pitch, Yaw]
+
+    #Função para converter Graus em Radianos
+    def rad(x):
+        return pi*x/180.0
+        
+    #Função para converter Radianos em Graus
+    def graus(x):
+        return x*180.0/pi
+    
+    print "##########################################################################################"    
+    print "Testando a função que converte ângulos de Euler (Roll, Pitch, Yaw) em quaternion com os valores (30.0, 15.0, 20.0)"    
+    [q1,q2,q3,q4] = criaQuaternionFromRPY(rad(30.0),  rad(15.0), rad(20.0))
+    print ""
+    print "Quaternion : %.6lf + %.6lfi + %.6lfj + %.6lfk" %(q1,q2,q3,q4)
+    print ""
+    print ""
+    print "Testando a função que converte quaternion em ângulos de Euler (Roll, Pitch, Yaw) com os valores w=%.6lf  x=%.6lf  y=%.6lf  z=%.6lf" %(q1,q2,q3,q4)        
+    [R,P,Y] = criaRPYFromQuaternion(q1, q2, q3, q4)
+    print ""   
+    print "Roll = %.2lf  Pitch = %.2lf  Yaw = %.2lf" %(graus(R), graus(P), graus(Y))
+    print ""
+    print "##########################################################################################"
+    print "Testando a função que converte ângulos de Euler (Roll, Pitch, Yaw) em quaternion com os valores (30.0, 60.0, 45.0)"    
+    [q1,q2,q3,q4] = criaQuaternionFromRPY(rad(30.0),rad(60.0),rad(45.0))
+    print ""
+    print "Quaternion : %.6lf + %.6lfi + %.6lfj + %.6lfk" %(q1,q2,q3,q4)
+    print ""
+    print ""
+    print "Testando a função que converte quaternion em ângulos de Euler (Roll, Pitch, Yaw) com os valores w=%.6lf  x=%.6lf  y=%.6lf  z=%.6lf" %(q1,q2,q3,q4)        
+    [R,P,Y] = criaRPYFromQuaternion(q1, q2, q3, q4)
+    print ""   
+    print "Roll = %.2lf  Pitch = %.2lf  Yaw = %.2lf" %(graus(R), graus(P), graus(Y))
+
+
+
+=======================================================================
+Segundo algoritmo de conversão de Quaternion <-> Roll, Pitch, Yaw
+=======================================================================
+.. code:: python
+    :show_code:   yes
+    :show_output: yes
+    :show_images: yes
+    :line_number: yes
+
+    import ia636
+    from ia636 import *
+    import numpy as np
+    import scipy
+    from scipy import *
+    import math as math
+    
+        # Fontes:
+        #*http://www.euclideanspace.com/maths/geometry/rotations/conversions/eulerToQuaternion/index.htm 
+        #*http://www.euclideanspace.com/maths/geometry/rotations/conversions/quaternionToEuler/index.htm 
+            
+        #Função para converter Graus em Radianos
+    def rad(x):
+        return pi*x/180.0
+        
+    #Função para converter Radianos em Graus
+    def graus(x):
+        return x*180.0/pi
+        
+        
+    def euler_from_quaternion(quaternion, axes='sxyz'):
+    # Função que retorna ângulos Euler a partir de quaternion para determinada sequencia de eixo
+    #    Ex: angles = euler_from_quaternion([0.99810947, 0.06146124, 0, 0])
+     return euler_from_matrix(quaternion_matrix(quaternion), axes)
+        
+    def euler_from_matrix(matrix, axes='sxyz'):
+    # Função que retorna ângulos Euler da matriz de rotação para determinada sequência de eixos
+     try:
+        firstaxis, parity, repetition, frame = _AXES2TUPLE[axes.lower()]
+     except (AttributeError, KeyError):
+        _TUPLE2AXES[axes]  # validation
+        firstaxis, parity, repetition, frame = axes
+     i = firstaxis
+     j = _NEXT_AXIS[i+parity]
+     k = _NEXT_AXIS[i-parity+1]
+     M = numpy.array(matrix, dtype=numpy.float64, copy=False)[:3, :3]
+     if repetition:
+        sy = math.sqrt(M[i, j]*M[i, j] + M[i, k]*M[i, k])
+        if sy > _EPS:
+            ax = math.atan2( M[i, j],  M[i, k])
+            ay = math.atan2( sy,       M[i, i])
+            az = math.atan2( M[j, i], -M[k, i])
+        else:
+            ax = math.atan2(-M[j, k],  M[j, j])
+            ay = math.atan2( sy,       M[i, i])
+            az = 0.0
+     else:
+        cy = math.sqrt(M[i, i]*M[i, i] + M[j, i]*M[j, i])
+        if cy > _EPS:
+            ax = math.atan2( M[k, j],  M[k, k])
+            ay = math.atan2(-M[k, i],  cy)
+            az = math.atan2( M[j, i],  M[i, i])
+        else:
+            ax = math.atan2(-M[j, k],  M[j, j])
+            ay = math.atan2(-M[k, i],  cy)
+            az = 0.0
+
+     if parity:
+        ax, ay, az = -ax, -ay, -az
+     if frame:
+        ax, az = az, ax
+     return ax, ay, az 
+   
+     
+    def quaternion_from_euler(ai, aj, ak, axes='sxyz'):
+    # Função que retorna quaternion a partir de ângulos Euler angles e sequência de eixos
+    #
+    # ai, aj, ak : ângulos  roll, pitch e yaw 
+    # axes : Uma das 24 sequências de eixos como string
+    #    Ex:
+    #    >>> q = quaternion_from_euler(1, 2, 3, 'ryxz')
+     try:
+        firstaxis, parity, repetition, frame = _AXES2TUPLE[axes.lower()]
+     except (AttributeError, KeyError):
+        _TUPLE2AXES[axes]  # validation
+        firstaxis, parity, repetition, frame = axes
+     i = firstaxis + 1
+     j = _NEXT_AXIS[i+parity-1] + 1
+     k = _NEXT_AXIS[i-parity] + 1
+     if frame:
+        ai, ak = ak, ai
+     if parity:
+        aj = -aj
+     ai /= 2.0
+     aj /= 2.0
+     ak /= 2.0
+     ci = math.cos(ai)
+     si = math.sin(ai)
+     cj = math.cos(aj)
+     sj = math.sin(aj)
+     ck = math.cos(ak)
+     sk = math.sin(ak)
+     cc = ci*ck
+     cs = ci*sk
+     sc = si*ck
+     ss = si*sk
+     q = numpy.empty((4, ))
+     if repetition:
+        q[0] = cj*(cc - ss)
+        q[i] = cj*(cs + sc)
+        q[j] = sj*(cc + ss)
+        q[k] = sj*(cs - sc)
+     else:
+        q[0] = cj*cc + sj*ss
+        q[i] = cj*sc - sj*cs
+        q[j] = cj*ss + sj*cc
+        q[k] = cj*cs - sj*sc
+     if parity:
+        q[j] *= -1.0
+     return q
+
+    #  Função para retornar a matriz identidade 4x4
+    def identity_matrix():
+     return numpy.identity(4)
+    # Função para retornar o inverso da matriz de transformação 
+    def inverse_matrix(matrix):
+     return numpy.linalg.inv(matrix)
+    
+    def quaternion_matrix(quaternion):
+        q = numpy.array(quaternion, dtype=numpy.float64, copy=True)
+        n = numpy.dot(q, q)
+        if n < _EPS:
+            return numpy.identity(4)
+        q *= math.sqrt(2.0 / n)
+        q = numpy.outer(q, q)
+        return numpy.array([
+            [1.0-q[2, 2]-q[3, 3],     q[1, 2]-q[3, 0],     q[1, 3]+q[2, 0], 0.0],
+            [    q[1, 2]+q[3, 0], 1.0-q[1, 1]-q[3, 3],     q[2, 3]-q[1, 0], 0.0],
+            [    q[1, 3]-q[2, 0],     q[2, 3]+q[1, 0], 1.0-q[1, 1]-q[2, 2], 0.0],
+            [                0.0,                 0.0,                 0.0, 1.0]])
+
+
+    # epsilon para testar se um número é próximo de 0
+    _EPS = numpy.finfo(float).eps * 4.0
+    
+    # Sequencias de eixos para ângulos de Euler
+    _NEXT_AXIS = [1, 2, 0, 1]
+
+    # mapeamento entre strings de eixos para/de tuplas de eixo interno, paridade, repetição, frame
+    _AXES2TUPLE = {
+    'sxyz': (0, 0, 0, 0), 'sxyx': (0, 0, 1, 0), 'sxzy': (0, 1, 0, 0),
+    'sxzx': (0, 1, 1, 0), 'syzx': (1, 0, 0, 0), 'syzy': (1, 0, 1, 0),
+    'syxz': (1, 1, 0, 0), 'syxy': (1, 1, 1, 0), 'szxy': (2, 0, 0, 0),
+    'szxz': (2, 0, 1, 0), 'szyx': (2, 1, 0, 0), 'szyz': (2, 1, 1, 0),
+    'rzyx': (0, 0, 0, 1), 'rxyx': (0, 0, 1, 1), 'ryzx': (0, 1, 0, 1),
+    'rxzx': (0, 1, 1, 1), 'rxzy': (1, 0, 0, 1), 'ryzy': (1, 0, 1, 1),
+    'rzxy': (1, 1, 0, 1), 'ryxy': (1, 1, 1, 1), 'ryxz': (2, 0, 0, 1),
+    'rzxz': (2, 0, 1, 1), 'rxyz': (2, 1, 0, 1), 'rzyz': (2, 1, 1, 1)}
+
+    _TUPLE2AXES = dict((v, k) for k, v in _AXES2TUPLE.items())
+
+
+
+    print "Transformando o quaternion 0.77 + 0.34i + 0.96j + 0.23k"
+    [x,y,z] = euler_from_quaternion([0.77, 0.34, 0.96, 0.23], axes='rxyz')
+    print "Ângulos Euler : (%.2lf, %.2lf, %.2lf)" %(graus(x),graus(y),graus(z))
+    print ""
+    print "Transformando os ângulos (%.2lf, %.2lf, %.2lf) " %(graus(x),graus(y),graus(z))
+    print "Quaternion : "
+    print quaternion_from_euler(x, y, z, axes='rxyz')
+    print ""
+    
+    print "Transformando o quaternion 0.25 + 0.15i + 0.30j + 0.90k"
+    [x,y,z] = euler_from_quaternion([0.25, 0.15, 0.30, 0.90], axes='rxyz')
+    print "Ângulos Euler : (%.2lf, %.2lf, %.2lf)" %(graus(x),graus(y),graus(z))
+    print ""
+    print "Transformando os ângulos (%.2lf, %.2lf, %.2lf) " %(graus(x),graus(y),graus(z))
+    print "Quaternion : "
+    print quaternion_from_euler(x, y, z, axes='rxyz')
+    print ""
+
+    print "Transformando o quaternion 0.57839554 -0.19279851i -0.18315859j + 0.77119405k"
+    [x,y,z] = euler_from_quaternion([0.57839554, -0.19279851, -0.18315859, 0.77119405], axes='rxyz')
+    print "Ângulos Euler : (%.2lf, %.2lf, %.2lf)" %(graus(x),graus(y),graus(z))
+    print ""
+    print "Transformando os ângulos (%.2lf, %.2lf, %.2lf) " %(graus(x),graus(y),graus(z))
+    print "Quaternion : "
+    print quaternion_from_euler(x, y, z, axes='rxyz')
+    print ""
+

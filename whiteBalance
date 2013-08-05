@@ -1,0 +1,65 @@
+:language_code: pt_br
+
+================
+MarsWhite_Renato
+================
+
+:Autor: renatosjoao
+:Data: 24/09/2012
+
+
+.. code:: python
+    :show_code:   yes
+    :show_output: yes
+    :show_images: yes
+    :line_number: yes 
+    
+    import numpy as np
+    from ia636 import *
+    
+    # lendo a imagem tirada em Marte para a variavel ic
+    ic = adread("/home/rubens/www/media/Attachments/courseVISUFABC_2012Q3/MarsWhite_Kurono/xsb_mmorph56546_001.png").astype('float32')
+    # lendo a imagem processada na Terra com white balance na variável iw 
+    iw = adread("/home/rubens/www/media/Attachments/courseVISUFABC_2012Q3/MarsWhite_Kurono/xsb_mmorph56546_002.png").astype('float32')    
+     
+    adshow(ic,"Imagem Original")    # plotando a imagem original tirada em Marte    
+
+    #print ic.shape                    
+    #print iw.shape        
+    iw2 = iw[:,1:,:]                # Como as imagens original tirada em Marte e a imagem 
+                                    # processada na Terra não possuem o mesmo tamanho  estou cortando
+                                    # a primeira linha da imagem processada na Terra
+    #print iw2.shape
+    #plotando o histograma do canal R da imagem original de Marte
+    mmplot([[iahistogram(ic[0,:,:].astype(int32))]],title="Histograma Imagem Original: Canal R")
+    #plotando o histograma do canal G da imagem original de Marte
+    mmplot([[iahistogram(ic[1,:,:].astype(int32))]],title="Histograma Imagem Original: Canal G")
+    #plotando o histograma do canal B da imagem original de Marte
+    mmplot([[iahistogram(ic[2,:,:].astype(int32))]],title="Histograma Imagem Original: Canal B")
+    
+    adshow(iw,"White Balanced Original")  # plotando a imagem processada na Terra 
+    
+    #plotando o histograma do canal R da imagem processada na Terra
+    mmplot([[iahistogram(iw[0,:,:].astype(int32))]],title="Histograma White Balanced Original: Canal R")
+    #plotando o histograma do canal G da imagem processada na Terra
+    mmplot([[iahistogram(iw[1,:,:].astype(int32))]],title="Histograma White Balanced Original: Canal G")
+    #plotando o histograma do canal B da imagem processada na Terra
+    mmplot([[iahistogram(iw[2,:,:].astype(int32))]],title="Histograma White Balanced Original: Canal B")
+
+    Renato = ic    # Copiando a imagem original de Marte para a variável Renato
+    Renato[0,:,:] = ic[0,:,:]*255/ic[0,:,:].max()            #  esticando o histograma no canal R
+    Renato[1,:,:] = ic[1,:,:]*255/ic[1,:,:].max()            #     "             "        "     G
+    Renato[2,:,:] = ic[2,:,:]*255/ic[2,:,:].max()            #     "             "        "     B
+
+    adshow(Renato,"White Balance do Renato")            # plotando a imagem processada Renato
+
+    #plotando o histograma do canal  da imagem processada do Renato
+    mmplot([[iahistogram(Renato[0,:,:].astype(int32))]],title="Histograma White Balanced Renato: Canal R")
+    #plotando o histograma do canal  da imagem processada do Renato
+    mmplot([[iahistogram(Renato[1,:,:].astype(int32))]],title="Histograma White Balanced Renato: Canal G")
+    #plotando o histograma do canal  da imagem processada do Renato
+    mmplot([[iahistogram(Renato[2,:,:].astype(int32))]],title="Histograma White Balanced Renato: Canal B")       
+    
+    Erro = sqrt((((Renato - iw2)**2).sum()) /iw2.size)    # Calculando o Erro entre a imagem processada na Terra
+    print "Erro: %.10lf" % Erro                           #  com uma linha cortada e a imagem Renato processada por mim
+
